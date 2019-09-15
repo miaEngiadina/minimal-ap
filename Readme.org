@@ -1,2 +1,131 @@
-#+TITLE: Minimal ActivityPub server
+#+TITLE: A minimal ActivityPub server
 
+This is a minimal ActivityPub server intended for demonstrating use-cases of ActivityPub and experimenting with ideas.
+
+* Quick tour
+** Actor
+
+Actor objects can be retrieved with a GET request to the ~/actors/actor-name~ endpoint.
+
+For example we can retrieve the actor object for Alice:
+
+#+BEGIN_SRC restclient
+GET http://localhost:8080/actors/alice
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC js
+{
+  "id": "http://localhost:8080/actors/alice",
+  "name": "Alice",
+  "type": "Person",
+  "inbox": "http://localhost:8080/actors/alice/inbox",
+  "outbox": "http://localhost:8080/actors/alice/outbox"
+}
+// GET http://localhost:8080/actors/alice
+// HTTP/1.1 200 OK
+// Content-Length: 178
+// Content-Type: application/json;charset=utf-8
+// Request duration: 0.006258s
+#+END_SRC
+
+*** Inbox
+We can retrieve Alice's inbox (which is currently empty):
+
+#+BEGIN_SRC restclient
+GET http://localhost:8080/actors/alice/inbox
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC js
+{
+  "type": "OrderedCollection",
+  "totalItems": 0,
+  "orderedItems": []
+}
+// GET http://localhost:8080/actors/alice/inbox
+// HTTP/1.1 200 OK
+// Content-Length: 61
+// Content-Type: application/json;charset=utf-8
+// Request duration: 0.006280s
+#+END_SRC
+*** Outbox
+We can also retrieve Alice's outbox (also still empty):
+
+#+BEGIN_SRC restclient
+GET http://localhost:8080/actors/alice/outbox
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC js
+{
+  "type": "OrderedCollection",
+  "totalItems": 0,
+  "orderedItems": []
+}
+// GET http://localhost:8080/actors/alice/outbox
+// HTTP/1.1 200 OK
+// Content-Length: 61
+// Content-Type: application/json;charset=utf-8
+// Request duration: 0.005648s
+#+END_SRC
+** Posting an activity
+Alice can post a note by making a ~POST~ request to her outbox.
+
+For example she can post a very simple note:
+#+BEGIN_SRC restclient
+POST http://localhost:8080/actors/alice/outbox
+Content-type: application/json
+
+{"type": "Note",
+ "content": "Hello World!"
+}
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC js
+{
+  "attributedTo": "http://localhost:8080/actors/alice",
+  "type": "Create",
+  "object": {
+    "content": "Hello World!",
+    "type": "Note"
+  }
+}
+// POST http://localhost:8080/actors/alice/outbox
+// HTTP/1.1 200 OK
+// Content-Length: 119
+// Content-Type: application/json;charset=utf-8
+// Request duration: 0.002495s
+#+END_SRC
+
+Note that the note was wrapped in a create activity and attributed to Alice.
+
+The activity is now placed in Alice's outbox:
+
+#+BEGIN_SRC restclient
+GET http://localhost:8080/actors/alice/outbox
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC js
+{
+  "type": "OrderedCollection",
+  "totalItems": 1,
+  "orderedItems": [
+    {
+      "attributedTo": "http://localhost:8080/actors/alice",
+      "type": "Create",
+      "object": {
+        "content": "Hello World!",
+        "type": "Note"
+      }
+    }
+  ]
+}
+// GET http://localhost:8080/actors/alice/outbox
+// HTTP/1.1 200 OK
+// Content-Length: 180
+// Content-Type: application/json;charset=utf-8
+// Request duration: 0.005301s
+#+END_SRC

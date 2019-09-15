@@ -4,7 +4,8 @@
              (web uri)
              (json)
              (srfi srfi-9)
-             (ice-9 match))
+             (ice-9 match)
+             (rnrs bytevectors))
 
 
 ;; Config
@@ -45,20 +46,25 @@
   (set-actor-outbox! actor (cons to-add (actor-outbox actor))))
 
 
-;; Object
+;; Activities
 
-(define-record-type <object>
-  (make-object id type alist)
-  object?
-  (id object-id)
-  (type object-type)
-  (alist object-alist))
+(define (activity-type? type)
+  "Returns true if type is a valid ActivityStreams activity type."
+  (if (member type
+              ;; TODO add all Activity types
+              '("Create" "Accept" "Add" "Announce" "Arrive" "Block"))
+      #t
+      #f))
 
-(define (object->scm object)
-  (cons*
-   `("id" . ,(object-id object))
-   `("type" . ,(object-type object))
-   (object-alist object)))
+(define (activity? object)
+  (activity-type? (assoc-ref object "type")))
+
+(define (wrap-in-create-activity object)
+  "Wrap object in a Create activity if it not already an activity."
+  (if (activity? object)
+      object
+      `(("type" . "Create")
+        ("object" . ,object))))
 
 
 ;; OrderedCollection
@@ -72,27 +78,37 @@
 
 ;; In memory key-value database
 
-(define database '())
+;;; Alist of actors with ids as keys
+(define actors-database '())
 
-(define (db-add! id value)
-  (set! database (acons id value database)))
+(define (add-actor! actor)
+  "Add an actor to the database"
+  (set! actors-database (acons (actor-id actor) actor actors-database)))
 
-(define (db-get id)
-  (assoc-ref database id))
+(define (get-actor id)
+  "Get actor from database"
+  (assoc-ref actors-database id))
 
-(define (db-add-actor! actor)
-  (db-add! (actor-id actor) actor))
+;; Everything else that is not an actor gets dumped in here
+(define objects-database '())
 
-(define (db-dereference id)
-  "Attempt to dereference objects by id from database.
-  If object is not in db just return the id."
-  (let ((dereferenced-thing (db-get id)))
+(define (add-object! id value)
+  "Add object to database"
+  (set! objects-database (acons id value objects-database)))
+
+(define (get-object id)
+  "Get an object from the databse"
+  (assoc-ref objects-database id))
+
+(define (dereference-object id)
+  "Dereference an object if it exists in the database. Unlike get-object this returns the id if there is no associated object in database."
+  (let ((dereferenced-thing (get-object id)))
     (if dereferenced-thing
         dereferenced-thing
         id)))
 
 ;; Add alice
-(db-add-actor!
+(add-actor!
   (make-actor
    (string-append base-url "/actors/" "alice")
    "Alice"
@@ -117,29 +133,47 @@
           (string-append "Resource not found: "
                          (uri->string (request-uri request)))))
 
+(define (handle-submission-to-outbox actor request request-body)
+  "Handle a POST to an actor's outbox"
+  (let* (;; Parse submission from JSON
+         (submission (json-string->scm (utf8->string request-body)))
+         (activity (assoc-set!
+                    ;; wrap as Create activity
+                    (wrap-in-create-activity submission)
+                    ;; attribute activity to the actor
+                    "attributedTo" (actor-id actor))))
+    (actor-add-to-outbox! actor activity)
+    (respond-with-json activity)))
+
 (define (activitypub-actors-handler actor-path-components request request-body)
   "Handle requests for a specific actor"
   (let*
       (;; build the actor id from the request url
        (actor-id (string-append base-url "/actors/" (car actor-path-components)))
        ;; get actor from db
-       (actor (db-get actor-id)))
+       (actor (get-actor actor-id)))
 
     (if (actor? actor)
 
         (match `(,(request-method request) ,(cdr actor-path-components))
 
-          ;; return the actor object
-          ((GET ())
+          ;; respond with the actor object
+          (('GET ())
            (respond-with-json (actor->scm actor)))
 
-          ((GET ("inbox"))
+          ;; respond with the actor's inbox as an OrderedCollection
+          (('GET ("inbox"))
            (respond-with-json (as-ordered-collection
-                               (map object->scm (actor-inbox actor)))))
+                               (map dereference-object (actor-inbox actor)))))
 
-          ((GET ("outbox"))
+          ;; respond with the actor's outbox as an OrderedCollection
+          (('GET ("outbox"))
            (respond-with-json (as-ordered-collection
-                               (map object->scm (actor-outbox actor)))))
+                               (map dereference-object (actor-outbox actor)))))
+
+          ;; handle a submission to the actor's inbox
+          (('POST ("outbox"))
+           (handle-submission-to-outbox actor request request-body))
 
           (_ (not-found request)))
 
