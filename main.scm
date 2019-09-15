@@ -48,23 +48,54 @@
 
 ;; Activities
 
+;; ActivityStreams Activity
+(define-record-type <activity>
+  (make-activity id type actor properties object)
+  activity?
+  (id activity-id)
+  (type activity-type)
+  (actor activity-actor)
+  (properties activity-properties)
+  (object activity-object))
+
+(define (activity->scm activity)
+  "serialize an actor record"
+  (append
+   `(("id" . ,(activity-id activity))
+     ("type" . ,(activity-type activity))
+     ("actor" . ,(if (actor? (activity-actor activity))
+                    (actor-id (activity-actor activity))
+                    (activity-actor activity)))
+     ("object" . ,(activity-object activity)))
+   (activity-properties activity)))
+
 (define (activity-type? type)
   "Returns true if type is a valid ActivityStreams activity type."
   (if (member type
               ;; TODO add all Activity types
               '("Create" "Accept" "Add" "Announce" "Arrive" "Block"))
       #t
-      #f))
+      #f)))
 
-(define (activity? object)
-  (activity-type? (assoc-ref object "type")))
+(define (alist->activity id actor alist)
+  "Cast an alist to an activity or wrap in a Create activity if it not already an activity."
+  (if
+   ;; object is already an ActivityStreams activity
+   (activity-type? (assoc-ref alist "type"))
 
-(define (wrap-in-create-activity object)
-  "Wrap object in a Create activity if it not already an activity."
-  (if (activity? object)
-      object
-      `(("type" . "Create")
-        ("object" . ,object))))
+   ;; then cast it into an activity record
+   (make-activity
+    id
+    (assoc-ref alist "type")
+    actor
+    ;; store all other properties
+    (filter (lambda (pair)
+              (member (car pair) '("id", "type", "actor", "object")))
+            alist)
+    (assoc-ref alist "object"))
+
+   ;; else wrap in a Create activity record
+   (make-activity id "Create" actor '() alist)))
 
 
 ;; OrderedCollection
@@ -107,15 +138,6 @@
         dereferenced-thing
         id)))
 
-;; Add alice
-(add-actor!
-  (make-actor
-   (string-append base-url "/actors/" "alice")
-   "Alice"
-   "Person"
-   '()
-   '()))
-
 
 ;; JSON helpers
 
@@ -135,15 +157,19 @@
 
 (define (handle-submission-to-outbox actor request request-body)
   "Handle a POST to an actor's outbox"
-  (let* (;; Parse submission from JSON
+  (let* (;; parse submission from JSON
          (submission (json-string->scm (utf8->string request-body)))
-         (activity (assoc-set!
-                    ;; wrap as Create activity
-                    (wrap-in-create-activity submission)
-                    ;; attribute activity to the actor
-                    "attributedTo" (actor-id actor))))
+
+         ;; cast/wrap in an activity
+         (activity (alist->activity "no-id" actor submission)))
+
+    ;; add activity to the actor outbox
     (actor-add-to-outbox! actor activity)
-    (respond-with-json activity)))
+
+    ;; TODO deliver to recipients
+
+    ;; respond with the created Activity
+    (respond-with-json (activity->scm activity))))
 
 (define (activitypub-actors-handler actor-path-components request request-body)
   "Handle requests for a specific actor"
@@ -164,12 +190,12 @@
           ;; respond with the actor's inbox as an OrderedCollection
           (('GET ("inbox"))
            (respond-with-json (as-ordered-collection
-                               (map dereference-object (actor-inbox actor)))))
+                               (map activity->scm (actor-inbox actor)))))
 
           ;; respond with the actor's outbox as an OrderedCollection
           (('GET ("outbox"))
            (respond-with-json (as-ordered-collection
-                               (map dereference-object (actor-outbox actor)))))
+                               (map activity->scm (actor-outbox actor)))))
 
           ;; handle a submission to the actor's inbox
           (('POST ("outbox"))
@@ -197,9 +223,6 @@
       (()
        (values '((content-type . (text/plain))) "index route"))
 
-      (("test")
-       (values '((content-type . (text/plain))) "Test"))
-
       (("actors" . actor-path-components)
        (activitypub-actors-handler actor-path-components request request-body))
 
@@ -215,5 +238,23 @@
   (run-server (lambda (request request-body)
                 (activitypub-handler request request-body))
               'http '(#:port 8080)))
+
+;; Add initial actors
+(map add-actor!
+     ;; Alice
+     `(,(make-actor
+        (string-append base-url "/actors/" "alice")
+        "Alice"
+        "Person"
+        '()
+        '())
+
+       ;; and Bob
+       ,(make-actor
+        (string-append base-url "/actors/" "bob")
+        "Bob"
+        "Person"
+        '()
+        '())))
 
 (main)

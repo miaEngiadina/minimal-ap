@@ -1,6 +1,6 @@
 #+TITLE: A minimal ActivityPub server
 
-This is a minimal ActivityPub server intended for demonstrating use-cases of ActivityPub and experimenting with ideas.
+A minimal ActivityPub server intended for demonstrating use-cases of ActivityPub and experimenting with ideas.
 
 * Quick tour
 ** Actor
@@ -26,7 +26,7 @@ GET http://localhost:8080/actors/alice
 // HTTP/1.1 200 OK
 // Content-Length: 178
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.006258s
+// Request duration: 0.001582s
 #+END_SRC
 
 *** Inbox
@@ -47,7 +47,7 @@ GET http://localhost:8080/actors/alice/inbox
 // HTTP/1.1 200 OK
 // Content-Length: 61
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.006280s
+// Request duration: 0.002165s
 #+END_SRC
 *** Outbox
 We can also retrieve Alice's outbox (also still empty):
@@ -67,36 +67,41 @@ GET http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
 // Content-Length: 61
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.005648s
+// Request duration: 0.002400s
 #+END_SRC
 ** Posting an activity
 Alice can post a note by making a ~POST~ request to her outbox.
 
-For example she can post a very simple note:
+For example she can post a very simple note (addressed to Bob):
 #+BEGIN_SRC restclient
 POST http://localhost:8080/actors/alice/outbox
 Content-type: application/json
-
-{"type": "Note",
- "content": "Hello World!"
+{
+  "type": "Create",
+  "to": [ "http://localhost:8080/actors/bob" ],
+  "object": {
+    "content": "Hello World!",
+    "type": "Note"
+  }
 }
 #+END_SRC
 
 #+RESULTS:
 #+BEGIN_SRC js
 {
-  "attributedTo": "http://localhost:8080/actors/alice",
+  "id": "no-id",
   "type": "Create",
+  "actor": "http://localhost:8080/actors/alice",
   "object": {
-    "content": "Hello World!",
-    "type": "Note"
+    "type": "Note",
+    "content": "Hello World!"
   }
 }
 // POST http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 119
+// Content-Length: 125
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.002495s
+// Request duration: 0.000962s
 #+END_SRC
 
 Note that the note was wrapped in a create activity and attributed to Alice.
@@ -114,18 +119,19 @@ GET http://localhost:8080/actors/alice/outbox
   "totalItems": 1,
   "orderedItems": [
     {
-      "attributedTo": "http://localhost:8080/actors/alice",
+      "id": "no-id",
       "type": "Create",
+      "actor": "http://localhost:8080/actors/alice",
       "object": {
-        "content": "Hello World!",
-        "type": "Note"
+        "type": "Note",
+        "content": "Hello World!"
       }
     }
   ]
 }
 // GET http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 180
+// Content-Length: 186
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.005301s
+// Request duration: 0.001360s
 #+END_SRC
