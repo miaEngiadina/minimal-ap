@@ -4,6 +4,7 @@
              (web uri)
              (json)
              (srfi srfi-9)
+             (srfi srfi-1)
              (ice-9 match)
              (rnrs bytevectors))
 
@@ -43,10 +44,16 @@
     ("outbox" . ,(actor-outbox-uri actor))))
 
 (define (actor-add-to-outbox! actor id object)
+  "Add a reference to an object in the actors outbox"
+  ;; TODO don't add object to the store here
   ;; add the object to the object database
   (add-object! id object)
   ;; and add reference to the object in the actor outbox
   (set-actor-outbox! actor (cons id (actor-outbox actor))))
+
+(define (actor-add-to-inbox! actor object-id)
+  "Add a reference to an object in the actors inbox"
+  (set-actor-inbox! actor (cons object-id (actor-inbox actor))))
 
 
 ;; Activities
@@ -80,6 +87,49 @@
       #t
       #f))
 
+(define (activity-recipients activity)
+  "Returns a list of recipients of the activity"
+  (fold (lambda (recipient-field recipients)
+          (let
+              ;; get the value of the recipient field
+              ((recipient-field-value
+                (assoc-ref (activity-properties activity) recipient-field)))
+            (cond
+
+             ;; if vector add all elements to recipients
+             ((vector? recipient-field-value)
+              (append (vector->list recipient-field-value) recipients))
+
+             ;; if string add to recipients
+             ((string? recipient-field-value)
+              (cons recipient-field-value recipients))
+
+             ;; else ignore the field value
+             (else recipients))))
+        ;; initialize list of recipients
+        '()
+        ;; fields to search for recipients
+        '("to" "bto" "cc" "bcc" "audience")))
+
+(define (deliver-activity activity)
+  "Deliver activity to recipients."
+  (map
+   (lambda (recipient)
+     (display
+      (string-append "Delivering activity " (activity-id activity) " to " recipient "\n"))
+     (let
+         ;; attempt to retrieve actor from database
+         ((actor (get-object recipient)))
+
+       (if (actor? actor)
+
+           ;; if actor could be retrieved add activity to inbox of actor
+           (actor-add-to-inbox! actor (activity-id activity))
+
+           ;; else return false
+           #f)))
+   (activity-recipients activity)))
+
 (define (alist->activity id actor alist)
   "Cast an alist to an activity or wrap in a Create activity if it not already an activity."
   (if
@@ -93,7 +143,8 @@
     actor
     ;; store all other properties
     (filter (lambda (pair)
-              (member (car pair) '("id", "type", "actor", "object")))
+              (not
+               (member (car pair) '("id" "type" "actor" "object"))))
             alist)
     (assoc-ref alist "object"))
 
@@ -112,7 +163,7 @@
 
 ;; In memory key-value database
 
-;; Alist of actors, activities and objects with ids as keys
+;; alist of actors, activities and objects with ids as keys
 (define database '())
 
 (define (add-object! id value)
@@ -182,14 +233,13 @@
          ;; TODO generate a separate id for the object
 
          ;; cast/wrap in an activity
-         (activity (alist->activity generated-activity-id actor submission))
-
-         )
+         (activity (alist->activity generated-activity-id actor submission)))
 
     ;; add activity to the actor outbox
     (actor-add-to-outbox! actor (activity-id activity) activity)
 
-    ;; TODO deliver to recipients
+    ;; deliver activity to recipients
+    (deliver-activity activity)
 
     ;; respond with the created Activity
     (respond-with-json (activity->scm activity))))
@@ -249,6 +299,10 @@
 
       (("actors" . actor-path-components)
        (activitypub-actors-handler actor-path-components request request-body))
+
+      ;; TODO add route for accessing objects
+      (("objects" . object-path-components)
+       (respond-with-json "TODO"))
 
       (_ (not-found request))
 

@@ -26,7 +26,7 @@ GET http://localhost:8080/actors/alice
 // HTTP/1.1 200 OK
 // Content-Length: 178
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.001582s
+// Request duration: 0.001513s
 #+END_SRC
 
 *** Inbox
@@ -47,7 +47,7 @@ GET http://localhost:8080/actors/alice/inbox
 // HTTP/1.1 200 OK
 // Content-Length: 61
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.002165s
+// Request duration: 0.002446s
 #+END_SRC
 *** Outbox
 We can also retrieve Alice's outbox (also still empty):
@@ -60,14 +60,33 @@ GET http://localhost:8080/actors/alice/outbox
 #+BEGIN_SRC js
 {
   "type": "OrderedCollection",
-  "totalItems": 0,
-  "orderedItems": []
+  "totalItems": 2,
+  "orderedItems": [
+    {
+      "id": "no-id",
+      "type": "Create",
+      "actor": "http://localhost:8080/actors/alice",
+      "object": {
+        "type": "Note",
+        "content": "Hello World!"
+      }
+    },
+    {
+      "id": "no-id",
+      "type": "Create",
+      "actor": "http://localhost:8080/actors/alice",
+      "object": {
+        "type": "Note",
+        "content": "Hello World!"
+      }
+    }
+  ]
 }
 // GET http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 61
+// Content-Length: 312
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.002400s
+// Request duration: 0.001488s
 #+END_SRC
 ** Posting an activity
 Alice can post a note by making a ~POST~ request to her outbox.
@@ -81,7 +100,7 @@ Content-type: application/json
   "to": [ "http://localhost:8080/actors/bob" ],
   "object": {
     "content": "Hello World!",
-    "type": "Note"
+    "type": "Anything"
   }
 }
 #+END_SRC
@@ -89,19 +108,22 @@ Content-type: application/json
 #+RESULTS:
 #+BEGIN_SRC js
 {
-  "id": "no-id",
+  "id": "http://localhost:8080/objects/7",
   "type": "Create",
   "actor": "http://localhost:8080/actors/alice",
   "object": {
-    "type": "Note",
+    "type": "Anything",
     "content": "Hello World!"
-  }
+  },
+  "to": [
+    "http://localhost:8080/actors/bob"
+  ]
 }
 // POST http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 125
+// Content-Length: 197
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.000962s
+// Request duration: 0.001091s
 #+END_SRC
 
 Note that the note was wrapped in a create activity and attributed to Alice.
@@ -119,19 +141,55 @@ GET http://localhost:8080/actors/alice/outbox
   "totalItems": 1,
   "orderedItems": [
     {
-      "id": "no-id",
+      "id": "http://localhost:8080/objects/7",
       "type": "Create",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
-        "type": "Note",
+        "type": "Anything",
         "content": "Hello World!"
-      }
+      },
+      "to": [
+        "http://localhost:8080/actors/bob"
+      ]
     }
   ]
 }
 // GET http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 186
+// Content-Length: 258
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.001360s
+// Request duration: 0.001528s
+#+END_SRC
+
+And in Bob's inbox:
+
+#+BEGIN_SRC restclient
+GET http://localhost:8080/actors/bob/inbox
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC js
+{
+  "type": "OrderedCollection",
+  "totalItems": 1,
+  "orderedItems": [
+    {
+      "id": "http://localhost:8080/objects/7",
+      "type": "Create",
+      "actor": "http://localhost:8080/actors/alice",
+      "object": {
+        "type": "Anything",
+        "content": "Hello World!"
+      },
+      "to": [
+        "http://localhost:8080/actors/bob"
+      ]
+    }
+  ]
+}
+// GET http://localhost:8080/actors/bob/inbox
+// HTTP/1.1 200 OK
+// Content-Length: 258
+// Content-Type: application/json;charset=utf-8
+// Request duration: 0.002323s
 #+END_SRC
