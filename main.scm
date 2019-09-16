@@ -43,13 +43,9 @@
     ("inbox" . ,(actor-inbox-uri actor))
     ("outbox" . ,(actor-outbox-uri actor))))
 
-(define (actor-add-to-outbox! actor id object)
+(define (actor-add-to-outbox! actor object-id)
   "Add a reference to an object in the actors outbox"
-  ;; TODO don't add object to the store here
-  ;; add the object to the object database
-  (add-object! id object)
-  ;; and add reference to the object in the actor outbox
-  (set-actor-outbox! actor (cons id (actor-outbox actor))))
+  (set-actor-outbox! actor (cons object-id (actor-outbox actor))))
 
 (define (actor-add-to-inbox! actor object-id)
   "Add a reference to an object in the actors inbox"
@@ -235,8 +231,11 @@
          ;; cast/wrap in an activity
          (activity (alist->activity generated-activity-id actor submission)))
 
-    ;; add activity to the actor outbox
-    (actor-add-to-outbox! actor (activity-id activity) activity)
+    ;; add activity to database
+    (add-object! (activity-id activity) activity)
+
+    ;; add reference to activity in the actor outbox
+    (actor-add-to-outbox! actor (activity-id activity))
 
     ;; deliver activity to recipients
     (deliver-activity activity)
