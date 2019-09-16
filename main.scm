@@ -205,7 +205,9 @@
 
 (define* (respond-with-json obj #:key (code 200))
   (values (build-response #:code code
-                          #:headers '((content-type . (application/json))))
+                          #:headers '((content-type . (application/json))
+                                      (Access-Control-Allow-Origin . "*")
+                                      ))
           (lambda (port) (scm->json
                           ;; make it look like JSON-LD
                           (cons '("@context" . "https://www.w3.org/ns/activitystreams")
@@ -278,6 +280,12 @@
           (('POST ("outbox"))
            (handle-submission-to-outbox actor request request-body))
 
+          (('OPTIONS _)
+           (values (build-response #:code 204
+                                   #:headers '((Access-Control-Allow-Origin . "*")
+                                               (Access-Control-Allow-Headers . "Authorization, Content-type")
+                                               (Access-Control-Allow-Methods . "GET, POST"))) ""))
+
           (_ (not-found request)))
 
         ;; if actor does not exist respond with 404
@@ -299,6 +307,9 @@
 
       (()
        (values '((content-type . (text/plain))) "index route"))
+
+      (("api" "ap" "whoami")
+       (respond-with-json (actor->scm (get-object "http://localhost:8080/actors/alice"))))
 
       (("actors" . actor-path-components)
        (activitypub-actors-handler actor-path-components request request-body))
