@@ -206,7 +206,11 @@
 (define* (respond-with-json obj #:key (code 200))
   (values (build-response #:code code
                           #:headers '((content-type . (application/json))))
-          (lambda (port) (scm->json obj port))))
+          (lambda (port) (scm->json
+                          ;; make it look like JSON-LD
+                          (cons '("@context" . "https://www.w3.org/ns/activitystreams")
+                                obj)
+                          port))))
 
 
 ;; Web server

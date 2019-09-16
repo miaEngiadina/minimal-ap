@@ -16,6 +16,7 @@ GET http://localhost:8080/actors/alice
 #+RESULTS:
 #+BEGIN_SRC js
 {
+  "@context": "https://www.w3.org/ns/activitystreams",
   "id": "http://localhost:8080/actors/alice",
   "name": "Alice",
   "type": "Person",
@@ -24,9 +25,9 @@ GET http://localhost:8080/actors/alice
 }
 // GET http://localhost:8080/actors/alice
 // HTTP/1.1 200 OK
-// Content-Length: 178
+// Content-Length: 229
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.001513s
+// Request duration: 0.003128s
 #+END_SRC
 
 *** Inbox
@@ -39,17 +40,20 @@ GET http://localhost:8080/actors/alice/inbox
 #+RESULTS:
 #+BEGIN_SRC js
 {
+  "@context": "https://www.w3.org/ns/activitystreams",
   "type": "OrderedCollection",
   "totalItems": 0,
   "orderedItems": []
 }
 // GET http://localhost:8080/actors/alice/inbox
 // HTTP/1.1 200 OK
-// Content-Length: 61
+// Content-Length: 112
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.002446s
+// Request duration: 0.002736s
 #+END_SRC
+
 *** Outbox
+
 We can also retrieve Alice's outbox (also still empty):
 
 #+BEGIN_SRC restclient
@@ -59,34 +63,16 @@ GET http://localhost:8080/actors/alice/outbox
 #+RESULTS:
 #+BEGIN_SRC js
 {
+  "@context": "https://www.w3.org/ns/activitystreams",
   "type": "OrderedCollection",
-  "totalItems": 2,
-  "orderedItems": [
-    {
-      "id": "no-id",
-      "type": "Create",
-      "actor": "http://localhost:8080/actors/alice",
-      "object": {
-        "type": "Note",
-        "content": "Hello World!"
-      }
-    },
-    {
-      "id": "no-id",
-      "type": "Create",
-      "actor": "http://localhost:8080/actors/alice",
-      "object": {
-        "type": "Note",
-        "content": "Hello World!"
-      }
-    }
-  ]
+  "totalItems": 0,
+  "orderedItems": []
 }
 // GET http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 312
+// Content-Length: 112
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.001488s
+// Request duration: 0.003248s
 #+END_SRC
 ** Posting an activity
 Alice can post a note by making a ~POST~ request to her outbox.
@@ -108,7 +94,8 @@ Content-type: application/json
 #+RESULTS:
 #+BEGIN_SRC js
 {
-  "id": "http://localhost:8080/objects/7",
+  "@context": "https://www.w3.org/ns/activitystreams",
+  "id": "http://localhost:8080/objects/3",
   "type": "Create",
   "actor": "http://localhost:8080/actors/alice",
   "object": {
@@ -121,9 +108,9 @@ Content-type: application/json
 }
 // POST http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 197
+// Content-Length: 248
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.001091s
+// Request duration: 0.002084s
 #+END_SRC
 
 Note that the note was wrapped in a create activity and attributed to Alice.
@@ -137,11 +124,12 @@ GET http://localhost:8080/actors/alice/outbox
 #+RESULTS:
 #+BEGIN_SRC js
 {
+  "@context": "https://www.w3.org/ns/activitystreams",
   "type": "OrderedCollection",
   "totalItems": 1,
   "orderedItems": [
     {
-      "id": "http://localhost:8080/objects/7",
+      "id": "http://localhost:8080/objects/3",
       "type": "Create",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
@@ -156,9 +144,9 @@ GET http://localhost:8080/actors/alice/outbox
 }
 // GET http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 258
+// Content-Length: 309
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.001528s
+// Request duration: 0.003059s
 #+END_SRC
 
 And in Bob's inbox:
@@ -170,11 +158,12 @@ GET http://localhost:8080/actors/bob/inbox
 #+RESULTS:
 #+BEGIN_SRC js
 {
+  "@context": "https://www.w3.org/ns/activitystreams",
   "type": "OrderedCollection",
   "totalItems": 1,
   "orderedItems": [
     {
-      "id": "http://localhost:8080/objects/7",
+      "id": "http://localhost:8080/objects/3",
       "type": "Create",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
@@ -189,7 +178,7 @@ GET http://localhost:8080/actors/bob/inbox
 }
 // GET http://localhost:8080/actors/bob/inbox
 // HTTP/1.1 200 OK
-// Content-Length: 258
+// Content-Length: 309
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.002323s
+// Request duration: 0.002850s
 #+END_SRC
