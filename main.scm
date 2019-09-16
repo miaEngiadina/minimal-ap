@@ -143,6 +143,16 @@
       (_ dereferenced-thing)
       )))
 
+;; counter for generated ids
+(define id-counter 1)
+
+(define (create-id!)
+  (set! id-counter (+ id-counter 1))
+  id-counter)
+
+(define (create-object-id!)
+  (string-append base-url "/objects/" (number->string (create-id!))))
+
 
 ;; JSON helpers
 
@@ -166,10 +176,15 @@
   (let* (;; parse submission from JSON
          (submission (json-string->scm (utf8->string request-body)))
 
-         ;; TODO generate id for activity/object
+         ;; generate id for activity
+         (generated-activity-id (create-object-id!))
+
+         ;; TODO generate a separate id for the object
 
          ;; cast/wrap in an activity
-         (activity (alist->activity "no-id" actor submission)))
+         (activity (alist->activity generated-activity-id actor submission))
+
+         )
 
     ;; add activity to the actor outbox
     (actor-add-to-outbox! actor (activity-id activity) activity)
