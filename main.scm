@@ -42,8 +42,11 @@
     ("inbox" . ,(actor-inbox-uri actor))
     ("outbox" . ,(actor-outbox-uri actor))))
 
-(define (actor-add-to-outbox! actor to-add)
-  (set-actor-outbox! actor (cons to-add (actor-outbox actor))))
+(define (actor-add-to-outbox! actor id object)
+  ;; add the object to the object database
+  (add-object! id object)
+  ;; and add reference to the object in the actor outbox
+  (set-actor-outbox! actor (cons id (actor-outbox actor))))
 
 
 ;; Activities
@@ -75,7 +78,7 @@
               ;; TODO add all Activity types
               '("Create" "Accept" "Add" "Announce" "Arrive" "Block"))
       #t
-      #f)))
+      #f))
 
 (define (alist->activity id actor alist)
   "Cast an alist to an activity or wrap in a Create activity if it not already an activity."
@@ -109,34 +112,36 @@
 
 ;; In memory key-value database
 
-;;; Alist of actors with ids as keys
-(define actors-database '())
-
-(define (add-actor! actor)
-  "Add an actor to the database"
-  (set! actors-database (acons (actor-id actor) actor actors-database)))
-
-(define (get-actor id)
-  "Get actor from database"
-  (assoc-ref actors-database id))
-
-;; Everything else that is not an actor gets dumped in here
-(define objects-database '())
+;; Alist of actors, activities and objects with ids as keys
+(define database '())
 
 (define (add-object! id value)
   "Add object to database"
-  (set! objects-database (acons id value objects-database)))
+  (set! database (acons id value database)))
 
 (define (get-object id)
   "Get an object from the databse"
-  (assoc-ref objects-database id))
+  (assoc-ref database id))
 
-(define (dereference-object id)
-  "Dereference an object if it exists in the database. Unlike get-object this returns the id if there is no associated object in database."
+(define (add-actor! actor)
+  "Add an actor to the database"
+  (add-object! (actor-id actor) actor))
+
+(define (dereference-and-serialize id)
+  "Dereference an object from database and serialize"
   (let ((dereferenced-thing (get-object id)))
-    (if dereferenced-thing
-        dereferenced-thing
-        id)))
+    (match dereferenced-thing
+
+      (($ <actor> ) (actor->scm dereferenced-thing))
+
+      (($ <activity>) (activity->scm dereferenced-thing))
+
+      ;; if object could not be dereferenced just return the id
+      (#f id)
+
+      ;; if it is something else return the derefenced thing
+      (_ dereferenced-thing)
+      )))
 
 
 ;; JSON helpers
@@ -155,21 +160,25 @@
           (string-append "Resource not found: "
                          (uri->string (request-uri request)))))
 
+
 (define (handle-submission-to-outbox actor request request-body)
   "Handle a POST to an actor's outbox"
   (let* (;; parse submission from JSON
          (submission (json-string->scm (utf8->string request-body)))
 
+         ;; TODO generate id for activity/object
+
          ;; cast/wrap in an activity
          (activity (alist->activity "no-id" actor submission)))
 
     ;; add activity to the actor outbox
-    (actor-add-to-outbox! actor activity)
+    (actor-add-to-outbox! actor (activity-id activity) activity)
 
     ;; TODO deliver to recipients
 
     ;; respond with the created Activity
     (respond-with-json (activity->scm activity))))
+
 
 (define (activitypub-actors-handler actor-path-components request request-body)
   "Handle requests for a specific actor"
@@ -177,7 +186,7 @@
       (;; build the actor id from the request url
        (actor-id (string-append base-url "/actors/" (car actor-path-components)))
        ;; get actor from db
-       (actor (get-actor actor-id)))
+       (actor (get-object actor-id)))
 
     (if (actor? actor)
 
@@ -190,12 +199,12 @@
           ;; respond with the actor's inbox as an OrderedCollection
           (('GET ("inbox"))
            (respond-with-json (as-ordered-collection
-                               (map activity->scm (actor-inbox actor)))))
+                               (map dereference-and-serialize (actor-inbox actor)))))
 
           ;; respond with the actor's outbox as an OrderedCollection
           (('GET ("outbox"))
            (respond-with-json (as-ordered-collection
-                               (map activity->scm (actor-outbox actor)))))
+                               (map dereference-and-serialize (actor-outbox actor)))))
 
           ;; handle a submission to the actor's inbox
           (('POST ("outbox"))
