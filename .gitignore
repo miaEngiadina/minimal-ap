@@ -1,0 +1,12 @@
+Makefile.in
+aclocal.m4
+autom4te.cache/
+build-aux/
+configure
+
+Makefile
+config.log
+config.status
+pre-inst-env
+
+*.go

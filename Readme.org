@@ -2,6 +2,14 @@
 
 A minimal ActivityPub server intended for demonstrating use-cases of ActivityPub and experimenting with ideas.
 
+* Starting it
+
+#+BEGIN_SRC sh
+./bootstrap
+./configure
+./pre-inst-env guile main.scm
+#+END_SRC
+
 * Quick tour
 ** Actor
 
@@ -27,7 +35,8 @@ GET http://localhost:8080/actors/alice
 // HTTP/1.1 200 OK
 // Content-Length: 229
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.003128s
+// Access-Control-Allow-Origin: *
+// Request duration: 0.002537s
 #+END_SRC
 
 *** Inbox
@@ -49,7 +58,8 @@ GET http://localhost:8080/actors/alice/inbox
 // HTTP/1.1 200 OK
 // Content-Length: 112
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.002736s
+// Access-Control-Allow-Origin: *
+// Request duration: 0.002094s
 #+END_SRC
 
 *** Outbox
@@ -72,7 +82,8 @@ GET http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
 // Content-Length: 112
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.003248s
+// Access-Control-Allow-Origin: *
+// Request duration: 0.002586s
 #+END_SRC
 ** Posting an activity
 Alice can post a note by making a ~POST~ request to her outbox.
@@ -83,7 +94,7 @@ POST http://localhost:8080/actors/alice/outbox
 Content-type: application/json
 {
   "type": "Create",
-  "to": [ "http://localhost:8080/actors/bob" ],
+  "to": [ "http://localhost:8080/actors/bob", "http://localhost:8080/actors/alice" ],
   "object": {
     "content": "Hello World!",
     "type": "Anything"
@@ -95,7 +106,7 @@ Content-type: application/json
 #+BEGIN_SRC js
 {
   "@context": "https://www.w3.org/ns/activitystreams",
-  "id": "http://localhost:8080/objects/3",
+  "id": "http://localhost:8080/objects/2",
   "type": "Create",
   "actor": "http://localhost:8080/actors/alice",
   "object": {
@@ -103,14 +114,16 @@ Content-type: application/json
     "content": "Hello World!"
   },
   "to": [
-    "http://localhost:8080/actors/bob"
+    "http://localhost:8080/actors/bob",
+    "http://localhost:8080/actors/alice"
   ]
 }
 // POST http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 248
+// Content-Length: 285
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.002084s
+// Access-Control-Allow-Origin: *
+// Request duration: 0.001531s
 #+END_SRC
 
 Note that the note was wrapped in a create activity and attributed to Alice.
@@ -129,7 +142,7 @@ GET http://localhost:8080/actors/alice/outbox
   "totalItems": 1,
   "orderedItems": [
     {
-      "id": "http://localhost:8080/objects/3",
+      "id": "http://localhost:8080/objects/2",
       "type": "Create",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
@@ -137,16 +150,18 @@ GET http://localhost:8080/actors/alice/outbox
         "content": "Hello World!"
       },
       "to": [
-        "http://localhost:8080/actors/bob"
+        "http://localhost:8080/actors/bob",
+        "http://localhost:8080/actors/alice"
       ]
     }
   ]
 }
 // GET http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 309
+// Content-Length: 346
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.003059s
+// Access-Control-Allow-Origin: *
+// Request duration: 0.001712s
 #+END_SRC
 
 And in Bob's inbox:
@@ -163,7 +178,7 @@ GET http://localhost:8080/actors/bob/inbox
   "totalItems": 1,
   "orderedItems": [
     {
-      "id": "http://localhost:8080/objects/3",
+      "id": "http://localhost:8080/objects/2",
       "type": "Create",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
@@ -171,14 +186,16 @@ GET http://localhost:8080/actors/bob/inbox
         "content": "Hello World!"
       },
       "to": [
-        "http://localhost:8080/actors/bob"
+        "http://localhost:8080/actors/bob",
+        "http://localhost:8080/actors/alice"
       ]
     }
   ]
 }
 // GET http://localhost:8080/actors/bob/inbox
 // HTTP/1.1 200 OK
-// Content-Length: 309
+// Content-Length: 346
 // Content-Type: application/json;charset=utf-8
-// Request duration: 0.002850s
+// Access-Control-Allow-Origin: *
+// Request duration: 0.001683s
 #+END_SRC
