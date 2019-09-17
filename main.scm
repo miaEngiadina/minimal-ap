@@ -6,6 +6,7 @@
              (srfi srfi-9)
              (srfi srfi-1)
              (ice-9 match)
+             (ice-9 receive)
              (rnrs bytevectors))
 
 
@@ -190,15 +191,19 @@
       (_ dereferenced-thing)
       )))
 
-;; counter for generated ids
-(define id-counter 1)
+
+;; ID generator
 
-(define (create-id!)
-  (set! id-counter (+ id-counter 1))
-  id-counter)
+(define (make-id-generator)
+  (let ((id-counter 0))
+    (lambda ()
+      (set! id-counter (+ id-counter 1))
+      id-counter)))
 
-(define (create-object-id!)
-  (string-append base-url "/objects/" (number->string (create-id!))))
+(define generate-id! (make-id-generator))
+
+(define (generate-object-id!)
+  (string-append base-url "/objects/" (number->string (generate-id!))))
 
 
 ;; JSON helpers
@@ -230,7 +235,7 @@
          (submission (json-string->scm (utf8->string request-body)))
 
          ;; generate id for activity
-         (generated-activity-id (create-object-id!))
+         (generated-activity-id (generate-object-id!))
 
          ;; TODO generate a separate id for the object
 
