@@ -4,6 +4,11 @@ A minimal ActivityPub server intended for demonstrating use-cases of ActivityPub
 
 * Starting it
 
+Prerequisites:
+
+- [[https://www.gnu.org/software/guile/][GNU Guile]]
+- [[https://github.com/aconchillo/guile-json][guile-json]]
+
 #+BEGIN_SRC sh
 ./bootstrap
 ./configure
