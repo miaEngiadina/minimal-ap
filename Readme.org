@@ -41,7 +41,7 @@ GET http://localhost:8080/actors/alice
 // Content-Length: 229
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
-// Request duration: 0.002537s
+// Request duration: 0.001744s
 #+END_SRC
 
 *** Inbox
@@ -55,16 +55,16 @@ GET http://localhost:8080/actors/alice/inbox
 #+BEGIN_SRC js
 {
   "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "OrderedCollection",
+  "type": "Collection",
   "totalItems": 0,
-  "orderedItems": []
+  "items": []
 }
 // GET http://localhost:8080/actors/alice/inbox
 // HTTP/1.1 200 OK
-// Content-Length: 112
+// Content-Length: 98
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
-// Request duration: 0.002094s
+// Request duration: 0.001924s
 #+END_SRC
 
 *** Outbox
@@ -79,16 +79,16 @@ GET http://localhost:8080/actors/alice/outbox
 #+BEGIN_SRC js
 {
   "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "OrderedCollection",
+  "type": "Collection",
   "totalItems": 0,
-  "orderedItems": []
+  "items": []
 }
 // GET http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 112
+// Content-Length: 98
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
-// Request duration: 0.002586s
+// Request duration: 0.002938s
 #+END_SRC
 ** Posting an activity
 Alice can post a note by making a ~POST~ request to her outbox.
@@ -102,7 +102,7 @@ Content-type: application/json
   "to": [ "http://localhost:8080/actors/bob", "http://localhost:8080/actors/alice" ],
   "object": {
     "content": "Hello World!",
-    "type": "Anything"
+    "type": "Note"
   }
 }
 #+END_SRC
@@ -111,11 +111,11 @@ Content-type: application/json
 #+BEGIN_SRC js
 {
   "@context": "https://www.w3.org/ns/activitystreams",
-  "id": "http://localhost:8080/objects/2",
+  "id": "http://localhost:8080/objects/1",
   "type": "Create",
   "actor": "http://localhost:8080/actors/alice",
   "object": {
-    "type": "Anything",
+    "type": "Note",
     "content": "Hello World!"
   },
   "to": [
@@ -125,10 +125,10 @@ Content-type: application/json
 }
 // POST http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 285
+// Content-Length: 281
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
-// Request duration: 0.001531s
+// Request duration: 0.001252s
 #+END_SRC
 
 Note that the note was wrapped in a create activity and attributed to Alice.
@@ -143,15 +143,15 @@ GET http://localhost:8080/actors/alice/outbox
 #+BEGIN_SRC js
 {
   "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "OrderedCollection",
+  "type": "Collection",
   "totalItems": 1,
-  "orderedItems": [
+  "items": [
     {
-      "id": "http://localhost:8080/objects/2",
+      "id": "http://localhost:8080/objects/1",
       "type": "Create",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
-        "type": "Anything",
+        "type": "Note",
         "content": "Hello World!"
       },
       "to": [
@@ -163,10 +163,10 @@ GET http://localhost:8080/actors/alice/outbox
 }
 // GET http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 346
+// Content-Length: 328
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
-// Request duration: 0.001712s
+// Request duration: 0.001692s
 #+END_SRC
 
 And in Bob's inbox:
@@ -179,15 +179,15 @@ GET http://localhost:8080/actors/bob/inbox
 #+BEGIN_SRC js
 {
   "@context": "https://www.w3.org/ns/activitystreams",
-  "type": "OrderedCollection",
+  "type": "Collection",
   "totalItems": 1,
-  "orderedItems": [
+  "items": [
     {
-      "id": "http://localhost:8080/objects/2",
+      "id": "http://localhost:8080/objects/1",
       "type": "Create",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
-        "type": "Anything",
+        "type": "Note",
         "content": "Hello World!"
       },
       "to": [
@@ -199,8 +199,8 @@ GET http://localhost:8080/actors/bob/inbox
 }
 // GET http://localhost:8080/actors/bob/inbox
 // HTTP/1.1 200 OK
-// Content-Length: 346
+// Content-Length: 328
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
-// Request duration: 0.001683s
+// Request duration: 0.001684s
 #+END_SRC

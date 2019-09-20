@@ -9,6 +9,7 @@
              (ice-9 receive)
              (rnrs bytevectors))
 
+
 
 ;; Config
 
@@ -19,20 +20,20 @@
 ;; Actors
 
 (define-record-type <actor>
-  (make-actor id name type inbox outbox)
+  (make-actor id name type)
   actor?
   (id actor-id)
   (name actor-name)
-  (type actor-type)
-  (inbox actor-inbox set-actor-inbox!)
-  (outbox actor-outbox set-actor-outbox!))
+  (type actor-type))
 
-(define (actor-outbox-uri actor)
+(define (actor-outbox actor)
+  "returns id of the actors outbox"
   (string-append
    (actor-id actor)
    "/outbox"))
 
-(define (actor-inbox-uri actor)
+(define (actor-inbox actor)
+  "returns id of the actors inbox"
   (string-append
    (actor-id actor)
    "/inbox"))
@@ -41,16 +42,8 @@
   `(("id" . ,(actor-id actor))
     ("name" . ,(actor-name actor))
     ("type" . ,(actor-type actor))
-    ("inbox" . ,(actor-inbox-uri actor))
-    ("outbox" . ,(actor-outbox-uri actor))))
-
-(define (actor-add-to-outbox! actor object-id)
-  "Add a reference to an object in the actors outbox"
-  (set-actor-outbox! actor (cons object-id (actor-outbox actor))))
-
-(define (actor-add-to-inbox! actor object-id)
-  "Add a reference to an object in the actors inbox"
-  (set-actor-inbox! actor (cons object-id (actor-inbox actor))))
+    ("inbox" . ,(actor-inbox actor))
+    ("outbox" . ,(actor-outbox actor))))
 
 
 ;; Activities
@@ -108,24 +101,6 @@
         ;; fields to search for recipients
         '("to" "bto" "cc" "bcc" "audience")))
 
-(define (deliver-activity activity)
-  "Deliver activity to recipients."
-  (map
-   (lambda (recipient)
-     (display
-      (string-append "Delivering activity " (activity-id activity) " to " recipient "\n"))
-     (let
-         ;; attempt to retrieve actor from database
-         ((actor (get-object recipient)))
-
-       (if (actor? actor)
-
-           ;; if actor could be retrieved add activity to inbox of actor
-           (actor-add-to-inbox! actor (activity-id activity))
-
-           ;; else return false
-           #f)))
-   (activity-recipients activity)))
 
 (define (alist->activity id actor alist)
   "Cast an alist to an activity or wrap in a Create activity if it not already an activity."
@@ -149,13 +124,24 @@
    (make-activity id "Create" actor '() alist)))
 
 
-;; OrderedCollection
+;; Collection
+
+(define-record-type <collection>
+  (make-collection id items)
+  collection?
+  (id collection-id)
+  (items collection-items set-collection-items!))
+
+(define (collection->scm collection)
+  (let ((items (collection-items collection)))
+    `(("type" . "Collection")
+      ("totalItems" . ,(length items))
+      ("items" . ,(list->vector (map dereference-and-serialize items))))))
 
 (define (as-ordered-collection stuff)
   `(("type" . "OrderedCollection")
     ("totalItems" . ,(length stuff))
     ("orderedItems" . ,(list->vector stuff))))
-
 
 
 ;; In memory key-value database
@@ -173,7 +159,33 @@
 
 (define (add-actor! actor)
   "Add an actor to the database"
-  (add-object! (actor-id actor) actor))
+
+  ;; create a new inbox and outbox collection
+  (let ((inbox (make-collection (actor-inbox actor) '()))
+        (outbox (make-collection (actor-outbox actor) '())))
+
+    ;; add actor to database
+    (add-object! (actor-id actor) actor)
+
+    ;; add inbox and outbox collection to database
+    (add-object! (collection-id inbox) inbox)
+    (add-object! (collection-id outbox) outbox)))
+
+(define (add-to-collection! collection item)
+  (cond
+   ((collection? collection)
+    ;; add to collection with set-collection-items! mutator
+    (set-collection-items! collection (cons item (collection-items collection))))
+
+   ((not collection)
+    ;; if collection is #f don't do anything. This prevents infinite cycles caused by condition below.
+    #f)
+
+   ((get-object collection)
+    ;; if collection is not a collection, attempt to dereference and retry
+    (add-to-collection! (get-object collection) item))
+
+   (else #f)))
 
 (define (dereference-and-serialize id)
   "Dereference an object from database and serialize"
@@ -183,6 +195,8 @@
       (($ <actor> ) (actor->scm dereferenced-thing))
 
       (($ <activity>) (activity->scm dereferenced-thing))
+
+      (($ <collection>) (collection->scm dereferenced-thing))
 
       ;; if object could not be dereferenced just return the id
       (#f id)
@@ -245,11 +259,34 @@
     ;; add activity to database
     (add-object! (activity-id activity) activity)
 
+    ;; TODO add object to db as separate entity
+
     ;; add reference to activity in the actor outbox
-    (actor-add-to-outbox! actor (activity-id activity))
+    (add-to-collection! (actor-outbox actor) (activity-id activity))
 
     ;; deliver activity to recipients
-    (deliver-activity activity)
+    (map
+     (lambda (recipient-id)
+
+       (display
+        (string-append "Delivering activity " (activity-id activity) " to " recipient-id "\n"))
+
+       (let
+           ;; attempt to retrieve actor from database
+           ((recipient (get-object recipient-id)))
+
+         (match recipient
+           (($ <actor>)
+            ;; if actor could be retrieved add activity to inbox of actor
+            (add-to-collection! (actor-inbox recipient) (activity-id activity)))
+
+           (($ <collection>)
+            ;; if recipient is collection add activity
+            (add-to-collection! recipient (activity-id activity)))
+
+           )))
+
+     (activity-recipients activity))
 
     ;; respond with the created Activity
     (respond-with-json (activity->scm activity))))
@@ -273,13 +310,11 @@
 
           ;; respond with the actor's inbox as an OrderedCollection
           (('GET ("inbox"))
-           (respond-with-json (as-ordered-collection
-                               (map dereference-and-serialize (actor-inbox actor)))))
+           (respond-with-json (dereference-and-serialize (actor-inbox actor))))
 
           ;; respond with the actor's outbox as an OrderedCollection
           (('GET ("outbox"))
-           (respond-with-json (as-ordered-collection
-                               (map dereference-and-serialize (actor-outbox actor)))))
+           (respond-with-json (dereference-and-serialize (actor-outbox actor))))
 
           ;; handle a submission to the actor's inbox
           (('POST ("outbox"))
@@ -342,16 +377,12 @@
      `(,(make-actor
         (string-append base-url "/actors/" "alice")
         "Alice"
-        "Person"
-        '()
-        '())
+        "Person")
 
        ;; and Bob
        ,(make-actor
         (string-append base-url "/actors/" "bob")
         "Bob"
-        "Person"
-        '()
-        '())))
+        "Person")))
 
 (main)
