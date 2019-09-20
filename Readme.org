@@ -93,13 +93,15 @@ GET http://localhost:8080/actors/alice/outbox
 ** Posting an activity
 Alice can post a note by making a ~POST~ request to her outbox.
 
-For example she can post a very simple note (addressed to Bob):
+For example she can post a very simple note (addressed to Bob and the special public collection):
 #+BEGIN_SRC restclient
 POST http://localhost:8080/actors/alice/outbox
 Content-type: application/json
 {
   "type": "Create",
-  "to": [ "http://localhost:8080/actors/bob", "http://localhost:8080/actors/alice" ],
+  "to": [ "http://localhost:8080/actors/bob",
+          "http://localhost:8080/actors/alice",
+          "https://www.w3.org/ns/activitystreams#Public"],
   "object": {
     "content": "Hello World!",
     "type": "Note"
@@ -111,7 +113,7 @@ Content-type: application/json
 #+BEGIN_SRC js
 {
   "@context": "https://www.w3.org/ns/activitystreams",
-  "id": "http://localhost:8080/objects/1",
+  "id": "http://localhost:8080/objects/3",
   "type": "Create",
   "actor": "http://localhost:8080/actors/alice",
   "object": {
@@ -120,15 +122,16 @@ Content-type: application/json
   },
   "to": [
     "http://localhost:8080/actors/bob",
-    "http://localhost:8080/actors/alice"
+    "http://localhost:8080/actors/alice",
+    "https://www.w3.org/ns/activitystreams#Public"
   ]
 }
 // POST http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 281
+// Content-Length: 328
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
-// Request duration: 0.001252s
+// Request duration: 0.001486s
 #+END_SRC
 
 Note that the note was wrapped in a create activity and attributed to Alice.
@@ -143,11 +146,12 @@ GET http://localhost:8080/actors/alice/outbox
 #+BEGIN_SRC js
 {
   "@context": "https://www.w3.org/ns/activitystreams",
+  "id": "http://localhost:8080/actors/alice/outbox",
   "type": "Collection",
   "totalItems": 1,
   "items": [
     {
-      "id": "http://localhost:8080/objects/1",
+      "id": "http://localhost:8080/objects/3",
       "type": "Create",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
@@ -156,20 +160,21 @@ GET http://localhost:8080/actors/alice/outbox
       },
       "to": [
         "http://localhost:8080/actors/bob",
-        "http://localhost:8080/actors/alice"
+        "http://localhost:8080/actors/alice",
+        "https://www.w3.org/ns/activitystreams#Public"
       ]
     }
   ]
 }
 // GET http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 328
+// Content-Length: 424
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
-// Request duration: 0.001692s
+// Request duration: 0.001769s
 #+END_SRC
 
-And in Bob's inbox:
+In Bob's inbox:
 
 #+BEGIN_SRC restclient
 GET http://localhost:8080/actors/bob/inbox
@@ -179,11 +184,12 @@ GET http://localhost:8080/actors/bob/inbox
 #+BEGIN_SRC js
 {
   "@context": "https://www.w3.org/ns/activitystreams",
+  "id": "http://localhost:8080/actors/bob/inbox",
   "type": "Collection",
   "totalItems": 1,
   "items": [
     {
-      "id": "http://localhost:8080/objects/1",
+      "id": "http://localhost:8080/objects/3",
       "type": "Create",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
@@ -192,15 +198,54 @@ GET http://localhost:8080/actors/bob/inbox
       },
       "to": [
         "http://localhost:8080/actors/bob",
-        "http://localhost:8080/actors/alice"
+        "http://localhost:8080/actors/alice",
+        "https://www.w3.org/ns/activitystreams#Public"
       ]
     }
   ]
 }
 // GET http://localhost:8080/actors/bob/inbox
 // HTTP/1.1 200 OK
-// Content-Length: 328
+// Content-Length: 421
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
-// Request duration: 0.001684s
+// Request duration: 0.001710s
+#+END_SRC
+
+And also in the special public collection:
+
+#+BEGIN_SRC restclient
+GET http://localhost:8080/public
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC js
+{
+  "@context": "https://www.w3.org/ns/activitystreams",
+  "id": "https://www.w3.org/ns/activitystreams#Public",
+  "type": "Collection",
+  "totalItems": 1,
+  "items": [
+    {
+      "id": "http://localhost:8080/objects/3",
+      "type": "Create",
+      "actor": "http://localhost:8080/actors/alice",
+      "object": {
+        "type": "Note",
+        "content": "Hello World!"
+      },
+      "to": [
+        "http://localhost:8080/actors/bob",
+        "http://localhost:8080/actors/alice",
+        "https://www.w3.org/ns/activitystreams#Public"
+      ]
+    }
+  ]
+}
+// GET http://localhost:8080/public
+// HTTP/1.1 200 OK
+// Content-Length: 427
+// Content-Type: application/json;charset=utf-8
+// Access-Control-Allow-Origin: *
+// Request duration: 0.001645s
 #+END_SRC

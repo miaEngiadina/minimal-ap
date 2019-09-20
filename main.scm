@@ -134,14 +134,10 @@
 
 (define (collection->scm collection)
   (let ((items (collection-items collection)))
-    `(("type" . "Collection")
+    `(("id" . ,(collection-id collection))
+      ("type" . "Collection")
       ("totalItems" . ,(length items))
       ("items" . ,(list->vector (map dereference-and-serialize items))))))
-
-(define (as-ordered-collection stuff)
-  `(("type" . "OrderedCollection")
-    ("totalItems" . ,(length stuff))
-    ("orderedItems" . ,(list->vector stuff))))
 
 
 ;; In memory key-value database
@@ -354,6 +350,11 @@
       (("actors" . actor-path-components)
        (activitypub-actors-handler actor-path-components request request-body))
 
+
+      (("public")
+       ;; the special public collection
+       (respond-with-json (dereference-and-serialize "https://www.w3.org/ns/activitystreams#Public")))
+
       ;; TODO add route for accessing objects
       (("objects" . object-path-components)
        (respond-with-json "TODO"))
@@ -384,5 +385,9 @@
         (string-append base-url "/actors/" "bob")
         "Bob"
         "Person")))
+
+;; Add the special public collection (see file:///home/aa/dev/ActivityPub/specs/www.w3.org/TR/activitypub/index.html#public-addressing)
+(add-object! "https://www.w3.org/ns/activitystreams#Public"
+             (make-collection "https://www.w3.org/ns/activitystreams#Public" '()))
 
 (main)
