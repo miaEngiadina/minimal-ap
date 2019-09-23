@@ -3,8 +3,9 @@
              (web response)
              (web uri)
              (json)
-             (srfi srfi-9)
              (srfi srfi-1)
+             (srfi srfi-9)
+             (srfi srfi-19)
              (ice-9 match)
              (ice-9 receive)
              (rnrs bytevectors))
@@ -50,11 +51,12 @@
 
 ;; ActivityStreams Activity
 (define-record-type <activity>
-  (make-activity id type actor properties object)
+  (make-activity id type actor published properties object)
   activity?
   (id activity-id)
   (type activity-type)
   (actor activity-actor)
+  (published activity-published)
   (properties activity-properties)
   (object activity-object))
 
@@ -63,6 +65,7 @@
   (append
    `(("id" . ,(activity-id activity))
      ("type" . ,(activity-type activity))
+     ("published" . ,(date->string (activity-published activity) "~4"))
      ("actor" . ,(if (actor? (activity-actor activity))
                     (actor-id (activity-actor activity))
                     (activity-actor activity)))
@@ -102,7 +105,7 @@
         '("to" "bto" "cc" "bcc" "audience")))
 
 
-(define (alist->activity id actor alist)
+(define (alist->activity id actor published alist)
   "Cast an alist to an activity or wrap in a Create activity if it not already an activity."
   (if
    ;; object is already an ActivityStreams activity
@@ -113,6 +116,7 @@
     id
     (assoc-ref alist "type")
     actor
+    published
     ;; store all other properties
     (filter (lambda (pair)
               (not
@@ -121,7 +125,7 @@
     (assoc-ref alist "object"))
 
    ;; else wrap in a Create activity record
-   (make-activity id "Create" actor '() alist)))
+   (make-activity id "Create" actor published '() alist)))
 
 
 ;; Collection
@@ -222,6 +226,8 @@
   (values (build-response #:code code
                           #:headers '((content-type . (application/json))
                                       (Access-Control-Allow-Origin . "*")
+                                      (Access-Control-Allow-Headers . "Authorization, Content-type")
+                                      (Access-Control-Allow-Methods . "GET, POST")
                                       ))
           (lambda (port) (scm->json
                           ;; make it look like JSON-LD
@@ -250,7 +256,7 @@
          ;; TODO generate a separate id for the object
 
          ;; cast/wrap in an activity
-         (activity (alist->activity generated-activity-id actor submission)))
+         (activity (alist->activity generated-activity-id actor (current-date) submission)))
 
     ;; add activity to database
     (add-object! (activity-id activity) activity)

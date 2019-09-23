@@ -41,7 +41,9 @@ GET http://localhost:8080/actors/alice
 // Content-Length: 229
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
-// Request duration: 0.001744s
+// Access-Control-Allow-Headers: Authorization, Content-type
+// Access-Control-Allow-Methods: GET, POST
+// Request duration: 0.002682s
 #+END_SRC
 
 *** Inbox
@@ -55,16 +57,19 @@ GET http://localhost:8080/actors/alice/inbox
 #+BEGIN_SRC js
 {
   "@context": "https://www.w3.org/ns/activitystreams",
+  "id": "http://localhost:8080/actors/alice/inbox",
   "type": "Collection",
   "totalItems": 0,
   "items": []
 }
 // GET http://localhost:8080/actors/alice/inbox
 // HTTP/1.1 200 OK
-// Content-Length: 98
+// Content-Length: 146
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
-// Request duration: 0.001924s
+// Access-Control-Allow-Headers: Authorization, Content-type
+// Access-Control-Allow-Methods: GET, POST
+// Request duration: 0.001626s
 #+END_SRC
 
 *** Outbox
@@ -79,16 +84,19 @@ GET http://localhost:8080/actors/alice/outbox
 #+BEGIN_SRC js
 {
   "@context": "https://www.w3.org/ns/activitystreams",
+  "id": "http://localhost:8080/actors/alice/outbox",
   "type": "Collection",
   "totalItems": 0,
   "items": []
 }
 // GET http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 98
+// Content-Length: 147
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
-// Request duration: 0.002938s
+// Access-Control-Allow-Headers: Authorization, Content-type
+// Access-Control-Allow-Methods: GET, POST
+// Request duration: 0.002721s
 #+END_SRC
 ** Posting an activity
 Alice can post a note by making a ~POST~ request to her outbox.
@@ -100,7 +108,6 @@ Content-type: application/json
 {
   "type": "Create",
   "to": [ "http://localhost:8080/actors/bob",
-          "http://localhost:8080/actors/alice",
           "https://www.w3.org/ns/activitystreams#Public"],
   "object": {
     "content": "Hello World!",
@@ -113,8 +120,9 @@ Content-type: application/json
 #+BEGIN_SRC js
 {
   "@context": "https://www.w3.org/ns/activitystreams",
-  "id": "http://localhost:8080/objects/3",
+  "id": "http://localhost:8080/objects/1",
   "type": "Create",
+  "published": "2019-09-23T10:20:23+0200",
   "actor": "http://localhost:8080/actors/alice",
   "object": {
     "type": "Note",
@@ -122,16 +130,17 @@ Content-type: application/json
   },
   "to": [
     "http://localhost:8080/actors/bob",
-    "http://localhost:8080/actors/alice",
     "https://www.w3.org/ns/activitystreams#Public"
   ]
 }
 // POST http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 328
+// Content-Length: 330
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
-// Request duration: 0.001486s
+// Access-Control-Allow-Headers: Authorization, Content-type
+// Access-Control-Allow-Methods: GET, POST
+// Request duration: 0.002352s
 #+END_SRC
 
 Note that the note was wrapped in a create activity and attributed to Alice.
@@ -151,8 +160,9 @@ GET http://localhost:8080/actors/alice/outbox
   "totalItems": 1,
   "items": [
     {
-      "id": "http://localhost:8080/objects/3",
+      "id": "http://localhost:8080/objects/1",
       "type": "Create",
+      "published": "2019-09-23T10:20:23+0200",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
         "type": "Note",
@@ -160,7 +170,6 @@ GET http://localhost:8080/actors/alice/outbox
       },
       "to": [
         "http://localhost:8080/actors/bob",
-        "http://localhost:8080/actors/alice",
         "https://www.w3.org/ns/activitystreams#Public"
       ]
     }
@@ -168,10 +177,12 @@ GET http://localhost:8080/actors/alice/outbox
 }
 // GET http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 424
+// Content-Length: 426
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
-// Request duration: 0.001769s
+// Access-Control-Allow-Headers: Authorization, Content-type
+// Access-Control-Allow-Methods: GET, POST
+// Request duration: 0.002599s
 #+END_SRC
 
 In Bob's inbox:
@@ -189,8 +200,9 @@ GET http://localhost:8080/actors/bob/inbox
   "totalItems": 1,
   "items": [
     {
-      "id": "http://localhost:8080/objects/3",
+      "id": "http://localhost:8080/objects/1",
       "type": "Create",
+      "published": "2019-09-23T10:20:23+0200",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
         "type": "Note",
@@ -198,7 +210,6 @@ GET http://localhost:8080/actors/bob/inbox
       },
       "to": [
         "http://localhost:8080/actors/bob",
-        "http://localhost:8080/actors/alice",
         "https://www.w3.org/ns/activitystreams#Public"
       ]
     }
@@ -206,10 +217,12 @@ GET http://localhost:8080/actors/bob/inbox
 }
 // GET http://localhost:8080/actors/bob/inbox
 // HTTP/1.1 200 OK
-// Content-Length: 421
+// Content-Length: 423
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
-// Request duration: 0.001710s
+// Access-Control-Allow-Headers: Authorization, Content-type
+// Access-Control-Allow-Methods: GET, POST
+// Request duration: 0.002290s
 #+END_SRC
 
 And also in the special public collection:
@@ -227,8 +240,9 @@ GET http://localhost:8080/public
   "totalItems": 1,
   "items": [
     {
-      "id": "http://localhost:8080/objects/3",
+      "id": "http://localhost:8080/objects/1",
       "type": "Create",
+      "published": "2019-09-23T10:20:23+0200",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
         "type": "Note",
@@ -236,7 +250,6 @@ GET http://localhost:8080/public
       },
       "to": [
         "http://localhost:8080/actors/bob",
-        "http://localhost:8080/actors/alice",
         "https://www.w3.org/ns/activitystreams#Public"
       ]
     }
@@ -244,8 +257,10 @@ GET http://localhost:8080/public
 }
 // GET http://localhost:8080/public
 // HTTP/1.1 200 OK
-// Content-Length: 427
+// Content-Length: 429
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
-// Request duration: 0.001645s
+// Access-Control-Allow-Headers: Authorization, Content-type
+// Access-Control-Allow-Methods: GET, POST
+// Request duration: 0.001811s
 #+END_SRC
