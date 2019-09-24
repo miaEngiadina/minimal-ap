@@ -149,6 +149,29 @@
 ;; alist of actors, activities and objects with ids as keys
 (define database '())
 
+(define (reset-database!)
+
+  (set! database '())
+
+  ;; Add initial actors
+  (map add-actor!
+       ;; Alice
+       `(,(make-actor
+           (string-append base-url "/actors/" "alice")
+           "Alice"
+           "Person")
+
+         ;; and Bob
+         ,(make-actor
+           (string-append base-url "/actors/" "bob")
+           "Bob"
+           "Person")))
+
+  ;; Add the special public collection (see file:///home/aa/dev/ActivityPub/specs/www.w3.org/TR/activitypub/index.html#public-addressing)
+  (add-object! "https://www.w3.org/ns/activitystreams#Public"
+               (make-collection "https://www.w3.org/ns/activitystreams#Public" '())))
+
+
 (define (add-object! id value)
   "Add object to database"
   (set! database (acons id value database)))
@@ -286,6 +309,11 @@
             ;; if recipient is collection add activity
             (add-to-collection! recipient (activity-id activity)))
 
+           (_
+            ;; Don't know what to do...
+            (display
+             (string-append "Don't know how to deliver to " recipient-id "\n")))
+
            )))
 
      (activity-recipients activity))
@@ -353,6 +381,11 @@
       (("api" "ap" "whoami")
        (respond-with-json (actor->scm (get-object "http://localhost:8080/actors/alice"))))
 
+      (("api" "dev" "reset")
+       (begin
+         (reset-database!)
+         (respond-with-json '(("msg" . "ok")))))
+
       (("actors" . actor-path-components)
        (activitypub-actors-handler actor-path-components request request-body))
 
@@ -377,23 +410,5 @@
   (run-server (lambda (request request-body)
                 (activitypub-handler request request-body))
               'http '(#:port 8080)))
-
-;; Add initial actors
-(map add-actor!
-     ;; Alice
-     `(,(make-actor
-        (string-append base-url "/actors/" "alice")
-        "Alice"
-        "Person")
-
-       ;; and Bob
-       ,(make-actor
-        (string-append base-url "/actors/" "bob")
-        "Bob"
-        "Person")))
-
-;; Add the special public collection (see file:///home/aa/dev/ActivityPub/specs/www.w3.org/TR/activitypub/index.html#public-addressing)
-(add-object! "https://www.w3.org/ns/activitystreams#Public"
-             (make-collection "https://www.w3.org/ns/activitystreams#Public" '()))
 
 (main)
