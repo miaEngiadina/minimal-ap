@@ -277,7 +277,6 @@
 
 (define (submission->activity-object actor submission)
   "Create an activity and object from submission"
-  ;; TODO this only makes sense with Create activities, what about other things...
   (if
    (activity-type? (assoc-ref submission "type"))
 
@@ -288,9 +287,13 @@
               (assoc-ref submission "object")
 
               ;; else create an object with an id
-              (cons
+              (cons*
                ;; with the newly generated id
                `("id" . ,(generate-object-id!))
+
+               ;; attribute activity to actor
+               `("attributedTo" . ,(actor-id actor))
+
                ;; but without any existing id
                (filter
                 (lambda (pair) (not (member (car pair) '("id"))))
