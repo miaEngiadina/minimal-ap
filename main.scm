@@ -411,4 +411,5 @@
                 (activitypub-handler request request-body))
               'http '(#:port 8080)))
 
+(reset-database!)
 (main)
