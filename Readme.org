@@ -270,3 +270,27 @@ GET http://localhost:8080/public
 // Access-Control-Allow-Methods: GET, POST
 // Request duration: 0.002152s
 #+END_SRC
+
+The created object can also be access directly by dereferencing the id:
+
+#+BEGIN_SRC restclient
+GET http://localhost:8080/objects/2
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC js
+{
+  "@context": "https://www.w3.org/ns/activitystreams",
+  "id": "http://localhost:8080/objects/2",
+  "type": "Note",
+  "content": "Hello World!"
+}
+// GET http://localhost:8080/objects/2
+// HTTP/1.1 200 OK
+// Content-Length: 130
+// Content-Type: application/json;charset=utf-8
+// Access-Control-Allow-Origin: *
+// Access-Control-Allow-Headers: Authorization, Content-type
+// Access-Control-Allow-Methods: GET, POST
+// Request duration: 0.001770s
+#+END_SRC

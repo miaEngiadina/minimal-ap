@@ -440,9 +440,15 @@
        ;; the special public collection
        (respond-with-json (dereference-and-serialize "https://www.w3.org/ns/activitystreams#Public")))
 
-      ;; TODO add route for accessing objects
       (("objects" . object-path-components)
-       (respond-with-json "TODO"))
+       (let ((object
+              ;; attempt to retrieve object from database
+              (dereference-and-serialize
+               (string-append base-url "/objects/" (car object-path-components)))))
+         (if object
+             (respond-with-json object)
+             ;; if object is not in db respond with 404
+             (not-found request))))
 
       (_ (not-found request))
 
