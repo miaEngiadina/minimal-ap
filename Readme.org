@@ -45,7 +45,7 @@ GET http://localhost:8080/actors/alice
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Headers: Authorization, Content-type
 // Access-Control-Allow-Methods: GET, POST
-// Request duration: 0.002164s
+// Request duration: 0.002152s
 #+END_SRC
 
 *** Inbox
@@ -71,7 +71,7 @@ GET http://localhost:8080/actors/alice/inbox
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Headers: Authorization, Content-type
 // Access-Control-Allow-Methods: GET, POST
-// Request duration: 0.002156s
+// Request duration: 0.001905s
 #+END_SRC
 
 *** Outbox
@@ -98,7 +98,7 @@ GET http://localhost:8080/actors/alice/outbox
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Headers: Authorization, Content-type
 // Access-Control-Allow-Methods: GET, POST
-// Request duration: 0.002070s
+// Request duration: 0.001890s
 #+END_SRC
 ** Posting an activity
 Alice can post a note by making a ~POST~ request to her outbox.
@@ -122,12 +122,12 @@ Content-type: application/json
 #+BEGIN_SRC js
 {
   "@context": "https://www.w3.org/ns/activitystreams",
-  "id": "http://localhost:8080/objects/1",
+  "id": "http://localhost:8080/objects/2",
   "type": "Create",
-  "published": "2019-09-25T10:52:06+0200",
+  "published": "2019-09-25T12:30:26+0200",
   "actor": "http://localhost:8080/actors/alice",
   "object": {
-    "id": "http://localhost:8080/objects/2",
+    "id": "http://localhost:8080/objects/1",
     "type": "Note",
     "content": "Hello World!"
   },
@@ -143,7 +143,7 @@ Content-type: application/json
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Headers: Authorization, Content-type
 // Access-Control-Allow-Methods: GET, POST
-// Request duration: 0.001562s
+// Request duration: 0.001609s
 #+END_SRC
 
 Note that the note was wrapped in a create activity and attributed to Alice.
@@ -163,12 +163,12 @@ GET http://localhost:8080/actors/alice/outbox
   "totalItems": 1,
   "items": [
     {
-      "id": "http://localhost:8080/objects/1",
+      "id": "http://localhost:8080/objects/2",
       "type": "Create",
-      "published": "2019-09-25T10:52:06+0200",
+      "published": "2019-09-25T12:30:26+0200",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
-        "id": "http://localhost:8080/objects/2",
+        "id": "http://localhost:8080/objects/1",
         "type": "Note",
         "content": "Hello World!"
       },
@@ -186,7 +186,7 @@ GET http://localhost:8080/actors/alice/outbox
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Headers: Authorization, Content-type
 // Access-Control-Allow-Methods: GET, POST
-// Request duration: 0.001952s
+// Request duration: 0.001782s
 #+END_SRC
 
 In Bob's inbox:
@@ -204,12 +204,12 @@ GET http://localhost:8080/actors/bob/inbox
   "totalItems": 1,
   "items": [
     {
-      "id": "http://localhost:8080/objects/1",
+      "id": "http://localhost:8080/objects/2",
       "type": "Create",
-      "published": "2019-09-25T10:52:06+0200",
+      "published": "2019-09-25T12:30:26+0200",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
-        "id": "http://localhost:8080/objects/2",
+        "id": "http://localhost:8080/objects/1",
         "type": "Note",
         "content": "Hello World!"
       },
@@ -227,7 +227,7 @@ GET http://localhost:8080/actors/bob/inbox
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Headers: Authorization, Content-type
 // Access-Control-Allow-Methods: GET, POST
-// Request duration: 0.001919s
+// Request duration: 0.001808s
 #+END_SRC
 
 And also in the special public collection:
@@ -245,12 +245,12 @@ GET http://localhost:8080/public
   "totalItems": 1,
   "items": [
     {
-      "id": "http://localhost:8080/objects/1",
+      "id": "http://localhost:8080/objects/2",
       "type": "Create",
-      "published": "2019-09-25T10:52:06+0200",
+      "published": "2019-09-25T12:30:26+0200",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
-        "id": "http://localhost:8080/objects/2",
+        "id": "http://localhost:8080/objects/1",
         "type": "Note",
         "content": "Hello World!"
       },
@@ -268,29 +268,123 @@ GET http://localhost:8080/public
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Headers: Authorization, Content-type
 // Access-Control-Allow-Methods: GET, POST
-// Request duration: 0.002152s
+// Request duration: 0.001879s
 #+END_SRC
 
 The created object can also be access directly by dereferencing the id:
 
 #+BEGIN_SRC restclient
-GET http://localhost:8080/objects/2
+GET http://localhost:8080/objects/1
 #+END_SRC
 
 #+RESULTS:
 #+BEGIN_SRC js
 {
   "@context": "https://www.w3.org/ns/activitystreams",
-  "id": "http://localhost:8080/objects/2",
+  "id": "http://localhost:8080/objects/1",
   "type": "Note",
   "content": "Hello World!"
 }
-// GET http://localhost:8080/objects/2
+// GET http://localhost:8080/objects/1
 // HTTP/1.1 200 OK
 // Content-Length: 130
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Headers: Authorization, Content-type
 // Access-Control-Allow-Methods: GET, POST
-// Request duration: 0.001770s
+// Request duration: 0.001836s
+#+END_SRC
+** Liking an activity
+
+Previously Alice has posted a note, which is now accessible as an object:
+
+#+BEGIN_SRC restclient
+GET http://localhost:8080/objects/1
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC js
+{
+  "@context": "https://www.w3.org/ns/activitystreams",
+  "id": "http://localhost:8080/objects/1",
+  "type": "Note",
+  "content": "Hello World!"
+}
+// GET http://localhost:8080/objects/1
+// HTTP/1.1 200 OK
+// Content-Length: 130
+// Content-Type: application/json;charset=utf-8
+// Access-Control-Allow-Origin: *
+// Access-Control-Allow-Headers: Authorization, Content-type
+// Access-Control-Allow-Methods: GET, POST
+// Request duration: 0.001782s
+#+END_SRC
+
+Bob can Like this note by posting a "Like" activity refering to the note:
+
+#+BEGIN_SRC restclient
+POST http://localhost:8080/actors/bob/outbox
+Content-type: application/json
+{
+  "type": "Like",
+  "to": ["https://www.w3.org/ns/activitystreams#Public"],
+  "object": "http://localhost:8080/objects/1"
+}
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC js
+{
+  "@context": "https://www.w3.org/ns/activitystreams",
+  "id": "http://localhost:8080/objects/3",
+  "type": "Like",
+  "published": "2019-09-25T12:31:28+0200",
+  "actor": "http://localhost:8080/actors/bob",
+  "object": {
+    "id": "http://localhost:8080/objects/1",
+    "type": "Note",
+    "content": "Hello World!"
+  },
+  "to": [
+    "https://www.w3.org/ns/activitystreams#Public"
+  ]
+}
+// POST http://localhost:8080/actors/bob/outbox
+// HTTP/1.1 200 OK
+// Content-Length: 330
+// Content-Type: application/json;charset=utf-8
+// Access-Control-Allow-Origin: *
+// Access-Control-Allow-Headers: Authorization, Content-type
+// Access-Control-Allow-Methods: GET, POST
+// Request duration: 0.001717s
+#+END_SRC
+
+
+#+BEGIN_SRC restclient
+GET http://localhost:8080/actors/bob/liked
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC js
+{
+  "@context": "https://www.w3.org/ns/activitystreams",
+  "id": "http://localhost:8080/actors/bob/liked",
+  "type": "Collection",
+  "totalItems": 1,
+  "items": [
+    {
+      "id": "http://localhost:8080/objects/1",
+      "type": "Note",
+      "content": "Hello World!"
+    }
+  ]
+}
+// GET http://localhost:8080/actors/bob/liked
+// HTTP/1.1 200 OK
+// Content-Length: 223
+// Content-Type: application/json;charset=utf-8
+// Access-Control-Allow-Origin: *
+// Access-Control-Allow-Headers: Authorization, Content-type
+// Access-Control-Allow-Methods: GET, POST
+// Request duration: 0.001810s
 #+END_SRC

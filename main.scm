@@ -98,11 +98,8 @@
 
 (define (activity-type? type)
   "Returns true if type is a valid ActivityStreams activity type."
-  (if (member type
-              ;; TODO add all Activity types
-              '("Create" "Accept" "Add" "Announce" "Arrive" "Block"))
-      #t
-      #f))
+  (member type ;; TODO support all Activity types
+          '("Create" "Like")))
 
 (define (activity-recipients activity)
   "Returns a list of recipients of the activity"
@@ -130,7 +127,11 @@
 
 
 (define (object-id object)
-  (assoc-ref object "id"))
+  (cond
+   ;; object is just a string, hopefully an id
+   ((string? object) object)
+
+   (else (assoc-ref object "id"))))
 
 
 ;; Collection
@@ -280,37 +281,38 @@
   (if
    (activity-type? (assoc-ref submission "type"))
 
-   (let (;; generate id for activity
-         (generated-activity-id (generate-object-id!))
+   (let ((object
+          (if (string? (assoc-ref submission "object"))
 
-         ;; generate id for object
-         (generated-object-id (generate-object-id!))
+              ;; object in submission is (hopefully) an id
+              (assoc-ref submission "object")
 
-         ;; get the current date
-         (published (current-date)))
+              ;; else create an object with an id
+              (cons
+               ;; with the newly generated id
+               `("id" . ,(generate-object-id!))
+               ;; but without any existing id
+               (filter
+                (lambda (pair) (not (member (car pair) '("id"))))
+                (assoc-ref submission "object"))))))
 
      (values
+
       ;; Return a freshly created activity
       (make-activity
-       generated-activity-id
+       (generate-object-id!)
        (assoc-ref submission "type")
        (actor-id actor)
-       published
+       (current-date)
        ;; all other properties
        (filter (lambda (pair)
                  (not
                   (member (car pair) '("id" "type" "actor" "object"))))
                submission)
-       generated-object-id)
+       (object-id object))
 
       ;; Return the object
-      (cons
-       ;; with the newly generated id
-       `("id" . ,generated-object-id)
-       ;; but without any existing id
-       (filter
-        (lambda (pair) (not (member (car pair) '("id"))))
-        (assoc-ref submission "object")))))
+      object))
 
    ;; else wrap in a Create activity record and retry
    ;; TODO: copy recipients from object to activity
@@ -329,8 +331,9 @@
     ;; add activity to database
     (add-object! (activity-id activity) activity)
 
-    ;; add object to database
-    (add-object! (object-id object) object)
+    ;; add object to database, if not a reference (a string)
+    (unless (string? object)
+      (add-object! (object-id object) object))
 
     ;; add reference to activity in the actor outbox
     (add-to-collection! (actor-outbox actor) (activity-id activity))
@@ -364,9 +367,12 @@
 
      (activity-recipients activity))
 
+    ;; If it is a Like activity add object to the actors liked collection
+    (when (string= (activity-type activity) "Like")
+      (add-to-collection! (actor-liked actor) (activity-object activity)))
+
     ;; respond with the created Activity
     (respond-with-json (activity->scm activity))))
-
 
 (define (activitypub-actors-handler actor-path-components request request-body)
   "Handle requests for a specific actor"
@@ -384,17 +390,21 @@
           (('GET ())
            (respond-with-json (actor->scm actor)))
 
-          ;; respond with the actor's inbox as an OrderedCollection
+          ;; respond with the actor's inbox
           (('GET ("inbox"))
            (respond-with-json (dereference-and-serialize (actor-inbox actor))))
 
-          ;; respond with the actor's outbox as an OrderedCollection
+          ;; respond with the actor's outbox
           (('GET ("outbox"))
            (respond-with-json (dereference-and-serialize (actor-outbox actor))))
 
           ;; handle a submission to the actor's inbox
           (('POST ("outbox"))
            (handle-submission-to-outbox actor request request-body))
+
+          ;; respond with actors liked collection
+          (('GET ("liked"))
+           (respond-with-json (dereference-and-serialize (actor-liked actor))))
 
           (('OPTIONS _)
            (values (build-response #:code 204
