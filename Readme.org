@@ -386,5 +386,12 @@ GET http://localhost:8080/actors/bob/liked
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Headers: Authorization, Content-type
 // Access-Control-Allow-Methods: GET, POST
-// Request duration: 0.001810s
+// Request duration: 0.001913s
 #+END_SRC
+* Limitations
+
+- There is no authentication or authorization
+- It is not performant
+- It is pretty easy to make it crash
+
+This is mostly intended to explore ideas around how an ActivityPub Server can be implemented and is only suited for experimentaiton and demonstration.
