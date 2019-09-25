@@ -35,16 +35,17 @@ GET http://localhost:8080/actors/alice
   "name": "Alice",
   "type": "Person",
   "inbox": "http://localhost:8080/actors/alice/inbox",
-  "outbox": "http://localhost:8080/actors/alice/outbox"
+  "outbox": "http://localhost:8080/actors/alice/outbox",
+  "liked": "http://localhost:8080/actors/alice/liked"
 }
 // GET http://localhost:8080/actors/alice
 // HTTP/1.1 200 OK
-// Content-Length: 229
+// Content-Length: 280
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Headers: Authorization, Content-type
 // Access-Control-Allow-Methods: GET, POST
-// Request duration: 0.002682s
+// Request duration: 0.002164s
 #+END_SRC
 
 *** Inbox
@@ -70,7 +71,7 @@ GET http://localhost:8080/actors/alice/inbox
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Headers: Authorization, Content-type
 // Access-Control-Allow-Methods: GET, POST
-// Request duration: 0.001626s
+// Request duration: 0.002156s
 #+END_SRC
 
 *** Outbox
@@ -97,7 +98,7 @@ GET http://localhost:8080/actors/alice/outbox
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Headers: Authorization, Content-type
 // Access-Control-Allow-Methods: GET, POST
-// Request duration: 0.002721s
+// Request duration: 0.002070s
 #+END_SRC
 ** Posting an activity
 Alice can post a note by making a ~POST~ request to her outbox.

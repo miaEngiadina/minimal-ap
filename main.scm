@@ -56,12 +56,19 @@
    (actor-id actor)
    "/inbox"))
 
+(define (actor-liked actor)
+  "returns id of the actors liked collection"
+  (string-append
+   (actor-id actor)
+   "/liked"))
+
 (define (actor->scm actor)
   `(("id" . ,(actor-id actor))
     ("name" . ,(actor-name actor))
     ("type" . ,(actor-type actor))
     ("inbox" . ,(actor-inbox actor))
-    ("outbox" . ,(actor-outbox actor))))
+    ("outbox" . ,(actor-outbox actor))
+    ("liked" . ,(actor-liked actor))))
 
 
 ;; Activities
@@ -202,14 +209,16 @@
 
   ;; create a new inbox and outbox collection
   (let ((inbox (make-collection (actor-inbox actor) '()))
-        (outbox (make-collection (actor-outbox actor) '())))
+        (outbox (make-collection (actor-outbox actor) '()))
+        (liked (make-collection (actor-liked actor) '())))
 
     ;; add actor to database
     (add-object! (actor-id actor) actor)
 
-    ;; add inbox and outbox collection to database
+    ;; add inbox, outbox and liked collection to database
     (add-object! (collection-id inbox) inbox)
-    (add-object! (collection-id outbox) outbox)))
+    (add-object! (collection-id outbox) outbox)
+    (add-object! (collection-id liked) liked)))
 
 (define (add-to-collection! collection item)
   (cond
@@ -429,4 +438,5 @@
               'http '(#:port 8080)))
 
 (reset-database!)
+
 (main)
