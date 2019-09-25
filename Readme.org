@@ -124,9 +124,10 @@ Content-type: application/json
   "@context": "https://www.w3.org/ns/activitystreams",
   "id": "http://localhost:8080/objects/1",
   "type": "Create",
-  "published": "2019-09-23T10:20:23+0200",
+  "published": "2019-09-25T10:52:06+0200",
   "actor": "http://localhost:8080/actors/alice",
   "object": {
+    "id": "http://localhost:8080/objects/2",
     "type": "Note",
     "content": "Hello World!"
   },
@@ -137,12 +138,12 @@ Content-type: application/json
 }
 // POST http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 330
+// Content-Length: 369
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Headers: Authorization, Content-type
 // Access-Control-Allow-Methods: GET, POST
-// Request duration: 0.002352s
+// Request duration: 0.001562s
 #+END_SRC
 
 Note that the note was wrapped in a create activity and attributed to Alice.
@@ -164,9 +165,10 @@ GET http://localhost:8080/actors/alice/outbox
     {
       "id": "http://localhost:8080/objects/1",
       "type": "Create",
-      "published": "2019-09-23T10:20:23+0200",
+      "published": "2019-09-25T10:52:06+0200",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
+        "id": "http://localhost:8080/objects/2",
         "type": "Note",
         "content": "Hello World!"
       },
@@ -179,12 +181,12 @@ GET http://localhost:8080/actors/alice/outbox
 }
 // GET http://localhost:8080/actors/alice/outbox
 // HTTP/1.1 200 OK
-// Content-Length: 426
+// Content-Length: 465
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Headers: Authorization, Content-type
 // Access-Control-Allow-Methods: GET, POST
-// Request duration: 0.002599s
+// Request duration: 0.001952s
 #+END_SRC
 
 In Bob's inbox:
@@ -204,9 +206,10 @@ GET http://localhost:8080/actors/bob/inbox
     {
       "id": "http://localhost:8080/objects/1",
       "type": "Create",
-      "published": "2019-09-23T10:20:23+0200",
+      "published": "2019-09-25T10:52:06+0200",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
+        "id": "http://localhost:8080/objects/2",
         "type": "Note",
         "content": "Hello World!"
       },
@@ -219,12 +222,12 @@ GET http://localhost:8080/actors/bob/inbox
 }
 // GET http://localhost:8080/actors/bob/inbox
 // HTTP/1.1 200 OK
-// Content-Length: 423
+// Content-Length: 462
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Headers: Authorization, Content-type
 // Access-Control-Allow-Methods: GET, POST
-// Request duration: 0.002290s
+// Request duration: 0.001919s
 #+END_SRC
 
 And also in the special public collection:
@@ -244,9 +247,10 @@ GET http://localhost:8080/public
     {
       "id": "http://localhost:8080/objects/1",
       "type": "Create",
-      "published": "2019-09-23T10:20:23+0200",
+      "published": "2019-09-25T10:52:06+0200",
       "actor": "http://localhost:8080/actors/alice",
       "object": {
+        "id": "http://localhost:8080/objects/2",
         "type": "Note",
         "content": "Hello World!"
       },
@@ -259,10 +263,10 @@ GET http://localhost:8080/public
 }
 // GET http://localhost:8080/public
 // HTTP/1.1 200 OK
-// Content-Length: 429
+// Content-Length: 468
 // Content-Type: application/json;charset=utf-8
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Headers: Authorization, Content-type
 // Access-Control-Allow-Methods: GET, POST
-// Request duration: 0.001811s
+// Request duration: 0.002152s
 #+END_SRC

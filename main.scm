@@ -93,7 +93,7 @@
      ("actor" . ,(if (actor? (activity-actor activity))
                     (actor-id (activity-actor activity))
                     (activity-actor activity)))
-     ("object" . ,(activity-object activity)))
+     ("object" . ,(dereference-and-serialize (activity-object activity))))
    (activity-properties activity)))
 
 (define (activity-type? type)
@@ -129,27 +129,8 @@
         '("to" "bto" "cc" "bcc" "audience")))
 
 
-(define (alist->activity id actor published alist)
-  "Cast an alist to an activity or wrap in a Create activity if it not already an activity."
-  (if
-   ;; object is already an ActivityStreams activity
-   (activity-type? (assoc-ref alist "type"))
-
-   ;; then cast it into an activity record
-   (make-activity
-    id
-    (assoc-ref alist "type")
-    actor
-    published
-    ;; store all other properties
-    (filter (lambda (pair)
-              (not
-               (member (car pair) '("id" "type" "actor" "object"))))
-            alist)
-    (assoc-ref alist "object"))
-
-   ;; else wrap in a Create activity record
-   (make-activity id "Create" actor published '() alist)))
+(define (object-id object)
+  (assoc-ref object "id"))
 
 
 ;; Collection
@@ -191,10 +172,9 @@
            "Bob"
            "Person")))
 
-  ;; Add the special public collection (see file:///home/aa/dev/ActivityPub/specs/www.w3.org/TR/activitypub/index.html#public-addressing)
+  ;; Add the special public collection
   (add-object! "https://www.w3.org/ns/activitystreams#Public"
                (make-collection "https://www.w3.org/ns/activitystreams#Public" '())))
-
 
 (define (add-object! id value)
   "Add object to database"
@@ -294,23 +274,63 @@
                          (uri->string (request-uri request)))))
 
 
-(define (handle-submission-to-outbox actor request request-body)
-  "Handle a POST to an actor's outbox"
-  (let* (;; parse submission from JSON
-         (submission (json-string->scm (utf8->string request-body)))
+(define (submission->activity-object actor submission)
+  "Create an activity and object from submission"
+  ;; TODO this only makes sense with Create activities, what about other things...
+  (if
+   (activity-type? (assoc-ref submission "type"))
 
-         ;; generate id for activity
+   (let (;; generate id for activity
          (generated-activity-id (generate-object-id!))
 
-         ;; TODO generate a separate id for the object
+         ;; generate id for object
+         (generated-object-id (generate-object-id!))
 
-         ;; cast/wrap in an activity
-         (activity (alist->activity generated-activity-id actor (current-date) submission)))
+         ;; get the current date
+         (published (current-date)))
+
+     (values
+      ;; Return a freshly created activity
+      (make-activity
+       generated-activity-id
+       (assoc-ref submission "type")
+       (actor-id actor)
+       published
+       ;; all other properties
+       (filter (lambda (pair)
+                 (not
+                  (member (car pair) '("id" "type" "actor" "object"))))
+               submission)
+       generated-object-id)
+
+      ;; Return the object
+      (cons
+       ;; with the newly generated id
+       `("id" . ,generated-object-id)
+       ;; but without any existing id
+       (filter
+        (lambda (pair) (not (member (car pair) '("id"))))
+        (assoc-ref submission "object")))))
+
+   ;; else wrap in a Create activity record and retry
+   ;; TODO: copy recipients from object to activity
+   (submission->activity-object actor `(("type" . "Create")
+                                        ("object" . ,submission)))))
+
+(define (handle-submission-to-outbox actor request request-body)
+  "Handle a POST to an actor's outbox"
+  (receive (activity object)
+      (submission->activity-object actor
+                                   ;; parse submission from Json
+                                   (json-string->scm (utf8->string request-body))
+                                   )
+
 
     ;; add activity to database
     (add-object! (activity-id activity) activity)
 
-    ;; TODO add object to db as separate entity
+    ;; add object to database
+    (add-object! (object-id object) object)
 
     ;; add reference to activity in the actor outbox
     (add-to-collection! (actor-outbox actor) (activity-id activity))
