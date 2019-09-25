@@ -9,9 +9,10 @@ Prerequisites:
 - [[https://www.gnu.org/software/guile/][GNU Guile]]
 - [[https://github.com/aconchillo/guile-json][guile-json]]
 
+All prerequisites can be installed via [[https://guix.gnu.org/][GNU Guix]].
+
 #+BEGIN_SRC sh
-./bootstrap
-./configure
+guix environment -l guix.scm
 ./pre-inst-env guile main.scm
 #+END_SRC
 
